@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오늘 점심 뭐 먹지?</title>
+<style>
+  /* ✏️ 바꿀 부분: 대표 색상 */
+  :root {
+    --main: #ff7a45;
+    --bg: #fff4ec;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 32px 16px;
+    color: #333;
+  }
+  h1 { font-size: 26px; color: var(--main); text-align: center; }
+  .sub { margin-top: 6px; color: #777; font-size: 15px; text-align: center; }
+  .wheel-wrap { position: relative; width: min(86vw, 340px); aspect-ratio: 1; margin: 28px 0; }
+  canvas { width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+  .pin {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 16px solid transparent; border-right: 16px solid transparent;
+    border-top: 28px solid #333; z-index: 2;
+  }
+  button {
+    background: var(--main); color: #fff; border: none;
+    font-size: 20px; font-weight: bold;
+    padding: 16px 48px; border-radius: 40px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  }
+  button:disabled { opacity: .5; }
+  .result {
+    margin-top: 24px; min-height: 60px;
+    font-size: 22px; font-weight: bold; text-align: center;
+  }
+  .result span { color: var(--main); font-size: 30px; display: block; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1 id="title"></h1>
+  <p class="sub" id="subtitle"></p>
+  <div class="wheel-wrap">
+    <div class="pin"></div>
+    <canvas id="wheel" width="600" height="600"></canvas>
+  </div>
+  <button id="spin">돌리기!</button>
+  <div class="result" id="result"></div>
+
+<script>
+/* ===================== ✏️ 바꿀 부분 ===================== */
+const 제목 = "오늘 점심 뭐 먹지? 🍽️";
+const 설명 = "버튼을 누르면 오늘의 메뉴가 정해져요";
+const 항목들 = ["김치찌개", "돈가스", "쌀국수", "비빔밥", "짜장면", "샐러드"];
+const 결과문구 = "오늘의 선택은";
+const 칸색상들 = ["#ffb38a", "#ffd6a5", "#fdffb6", "#caffbf", "#9bf6ff", "#bdb2ff", "#ffc6ff", "#a0c4ff"];
+/* ======================================================== */
+
+document.title = 제목;
+document.getElementById("title").textContent = 제목;
+document.getElementById("subtitle").textContent = 설명;
+
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const n = 항목들.length;
+const arc = (Math.PI * 2) / n;
+let angle = 0;
+
+function draw() {
+  const c = canvas.width / 2;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let i = 0; i < n; i++) {
+    const start = angle + i * arc - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(c, c);
+    ctx.arc(c, c, c, start, start + arc);
+    ctx.fillStyle = 칸색상들[i % 칸색상들.length];
+    ctx.fill();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 4; ctx.stroke();
+    ctx.save();
+    ctx.translate(c, c);
+    const mid = start + arc / 2;
+    const norm = ((mid % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const left = norm > Math.PI / 2 && norm < Math.PI * 1.5; // 왼쪽 칸은 글자를 뒤집어서 바로 보이게
+    ctx.rotate(left ? mid + Math.PI : mid);
+    ctx.textAlign = left ? "left" : "right";
+    ctx.fillStyle = "#333";
+    ctx.font = "bold " + (n > 8 ? 26 : 34) + "px sans-serif";
+    ctx.fillText(항목들[i], left ? -(c - 30) : c - 30, 12);
+    ctx.restore();
+  }
+  ctx.beginPath(); ctx.arc(c, c, 36, 0, Math.PI * 2);
+  ctx.fillStyle = "#fff"; ctx.fill();
+}
+draw();
+
+document.getElementById("spin").onclick = function () {
+  const btn = this;
+  btn.disabled = true;
+  document.getElementById("result").textContent = "";
+  const target = Math.floor(Math.random() * n);
+  // 바늘(맨 위)에 target 칸의 가운데가 오도록 회전
+  const finalAngle = Math.PI * 2 * 6 - (target * arc + arc / 2);
+  const startAngle = angle % (Math.PI * 2);
+  const duration = 3500;
+  const t0 = performance.now();
+  function step(now) {
+    const t = Math.min((now - t0) / duration, 1);
+    const ease = 1 - Math.pow(1 - t, 3);
+    angle = startAngle + (finalAngle - startAngle) * ease;
+    draw();
+    if (t < 1) requestAnimationFrame(step);
+    else {
+      document.getElementById("result").innerHTML = 결과문구 + "<span>" + 항목들[target] + "</span>";
+      btn.disabled = false;
+    }
+  }
+  requestAnimationFrame(step);
+};
+</script>
+</body>
+</html>
